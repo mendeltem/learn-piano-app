@@ -21,8 +21,8 @@ function layout(w) {
   // only the range the song uses, a little margin, starting and ending on white keys; at least 2 octaves
   let lo = 60, hi = 72;
   if (song.length) { lo = Math.min(...song.map((n) => n.pitch)); hi = Math.max(...song.map((n) => n.pitch)); }
-  lo = Math.max(21, lo - 2); hi = Math.min(108, hi + 2);
-  while (hi - lo < 24) { if (lo > 21) lo--; if (hi - lo < 24 && hi < 108) hi++; }
+  lo = Math.max(21, lo - 1); hi = Math.min(108, hi + 1);           // tight range: wider keys (user 07.11.)
+  while (hi - lo < 17) { if (lo > 21) lo--; if (hi - lo < 17 && hi < 108) hi++; }
   while (isBlack(lo)) lo--; while (isBlack(hi)) hi++;
   const whites = []; for (let p = lo; p <= hi; p++) if (!isBlack(p)) whites.push(p);
   const ww = w / whites.length, keys = new Map();
@@ -56,7 +56,7 @@ function draw() {
     const k = keys.get(n.pitch); if (!k) continue;
     const y1 = top - ((n.start - t) / ahead) * top, y0 = top - ((n.start + n.dur - t) / ahead) * top;
     const col = n.pitch < 60 ? LEFT : RIGHT;
-    const x = k.x + 1.5, bw = k.w - 3, yA = Math.max(0, y0), yB = Math.min(top, y1);
+    const x = k.x + 0.5, bw = k.w - 1, yA = Math.max(0, y0), yB = Math.min(top, y1);
     if (yB > yA) {
       g.shadowColor = col; g.shadowBlur = 14; g.fillStyle = col; g.globalAlpha = 0.55 + 0.45 * (n.vel ?? 0.8);
       roundRect(g, x, yA, bw, Math.max(4, yB - yA), Math.min(6, bw / 2)); g.fill();
