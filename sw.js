@@ -1,6 +1,6 @@
 // Learn Piano service worker: offline after the first visit. The page and the model are kept; libraries from the CDN
 // are cached on first use. Bump VERSION when the app changes, so phones load the new files.
-const VERSION = "learn-piano-v1";
+const VERSION = "learn-piano-v2";
 const SHELL = ["./", "index.html", "app.js", "practice.js", "manifest.webmanifest", "icon-192.png", "icon-512.png",
                "model/model.json", "model/group1-shard1of1.bin"];
 self.addEventListener("install", (e) => e.waitUntil(caches.open(VERSION).then((c) => c.addAll(SHELL)).then(() => self.skipWaiting())));

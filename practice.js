@@ -68,7 +68,7 @@ function draw() {
   for (const [p, col] of active) {
     const k = keys.get(p); if (!k) continue;
     // softer beams (user 07.11.): more transparent, narrower, less glow
-    const bh = beamsOnly ? top * 0.85 : top * 0.25, cx = k.x + k.w / 2, bw = k.w * (beamsOnly ? 0.8 : 0.6);
+    const bh = beamsOnly ? top * 0.45 : top * 0.12, cx = k.x + k.w / 2, bw = k.w * (beamsOnly ? 0.8 : 0.6);
     const gr = g.createLinearGradient(0, top, 0, top - bh);
     gr.addColorStop(0, col + "99"); gr.addColorStop(0.3, col + "44"); gr.addColorStop(1, col + "00");
     g.globalCompositeOperation = "lighter"; g.fillStyle = gr; g.shadowColor = col; g.shadowBlur = 10;
