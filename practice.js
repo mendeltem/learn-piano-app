@@ -4,16 +4,16 @@ const LEFT = "#2fd3c3", RIGHT = "#a774ff";                    // left hand (belo
 const isBlack = (p) => [1, 3, 6, 8, 10].includes(p % 12);
 
 let song = [], title = "", t = -2, playing = false, last = 0, sound = true, ctx = null;
+const playBtn = () => $("play");
+let beamsOnly = false;                                           // "Piano" view: only the keyboard and its light beams
+export function setBeamsOnly(on) { beamsOnly = on; draw(); }
 const started = new Set();
 
 export function setSong(notes, name) {
   song = notes.map((n) => ({ ...n })).sort((a, b) => a.start - b.start);
-  title = name; t = -2; playing = false; started.clear(); $("pPlay").textContent = "Play";
-  info(); draw();
-}
-function info() {
-  const end = song.length ? Math.max(...song.map((n) => n.start + n.dur)) : 0;
-  $("pracInfo").textContent = song.length ? `${title} · ${song.length} notes · ${end.toFixed(0)} s` : "";
+  const at = parseFloat(new URLSearchParams(location.search).get("at"));   // ?at=4 opens at second 4 (testing, links)
+  title = name; t = Number.isFinite(at) ? at : -2; playing = false; started.clear(); playBtn().textContent = "▶";
+  draw();
 }
 
 // ---------------------------------------------------------------- keyboard geometry
@@ -33,7 +33,7 @@ function draw() {
   const c = $("fall"), dpr = window.devicePixelRatio || 1, w = c.clientWidth, h = c.clientHeight;
   if (c.width !== w * dpr || c.height !== h * dpr) { c.width = w * dpr; c.height = h * dpr; }
   const g = c.getContext("2d"); g.setTransform(dpr, 0, 0, dpr, 0, 0);
-  const kh = Math.min(110, h * 0.22), top = h - kh, ahead = +$("ahead").value;
+  const kh = beamsOnly ? Math.min(220, h * 0.38) : Math.min(110, h * 0.22), top = h - kh, ahead = +$("ahead").value;
   const bg = g.createLinearGradient(0, 0, 0, top); bg.addColorStop(0, "#07090d"); bg.addColorStop(1, "#111827");
   g.fillStyle = bg; g.fillRect(0, 0, w, h);
   const keys = layout(w);
@@ -43,6 +43,11 @@ function draw() {
   // falling notes
   const active = new Map();
   for (const n of song) {
+    if (beamsOnly) {                                             // no falling bars: only what sounds now
+      if (n.start <= t && t < n.start + n.dur) active.set(n.pitch, n.pitch < 60 ? LEFT : RIGHT);
+      if (n.start > t) break;
+      continue;
+    }
     if (n.start > t + ahead) break;
     if (n.start + n.dur < t) continue;
     const k = keys.get(n.pitch); if (!k) continue;
@@ -55,6 +60,17 @@ function draw() {
       g.shadowBlur = 0; g.globalAlpha = 1;
     }
     if (n.start <= t && t < n.start + n.dur) active.set(n.pitch, col);
+  }
+  // light beams from every key that sounds now (full height in the Piano view, a short flare in the falling view)
+  for (const [p, col] of active) {
+    const k = keys.get(p); if (!k) continue;
+    const bh = beamsOnly ? top : top * 0.35, cx = k.x + k.w / 2, bw = k.w * (beamsOnly ? 1.3 : 0.9);
+    const gr = g.createLinearGradient(0, top, 0, top - bh);
+    gr.addColorStop(0, col); gr.addColorStop(0.25, col + "aa"); gr.addColorStop(1, col + "00");
+    g.globalCompositeOperation = "lighter"; g.fillStyle = gr; g.shadowColor = col; g.shadowBlur = 24;
+    g.fillRect(cx - bw / 2, top - bh, bw, bh);
+    g.fillStyle = "rgba(255,255,255,.55)"; g.fillRect(cx - bw * 0.12, top - bh * 0.8, bw * 0.24, bh * 0.8);   // bright core
+    g.shadowBlur = 0; g.globalCompositeOperation = "source-over";
   }
   // hit line
   g.fillStyle = "rgba(255,255,255,.35)"; g.fillRect(0, top - 2, w, 2);
@@ -89,19 +105,22 @@ function frame(now) {
   t += dt * (+$("speed").value / 100);
   for (let i = 0; i < song.length && song[i].start <= t; i++) if (!started.has(i) && song[i].start > t - .1) { started.add(i); note(song[i]); }
   const end = song.length ? Math.max(...song.map((n) => n.start + n.dur)) : 0;
-  if (t > end + 1) { playing = false; $("pPlay").textContent = "Play"; t = end + 1; }
+  if (t > end + 1) { playing = false; playBtn().textContent = "▶"; t = end + 1; }
   draw();
   if (playing) requestAnimationFrame(frame);
 }
-function toggle() {
+export function toggle() {
   if (!song.length) return;
-  playing = !playing; $("pPlay").textContent = playing ? "Pause" : "Play";
+  playing = !playing; playBtn().textContent = playing ? "⏸" : "▶";
   if (playing) { ctx = ctx || (sound ? new AudioContext() : null); last = performance.now(); requestAnimationFrame(frame); }
 }
-function mode(learn) {
-  sound = learn;
-  $("mLearn").setAttribute("aria-checked", String(learn)); $("mPractice").setAttribute("aria-checked", String(!learn));
+export function stop() { if (playing) toggle(); }
+function setSound(on) {
+  sound = on; const b = $("sound");
+  b.textContent = on ? "🔊" : "🔇"; b.setAttribute("aria-pressed", String(on));
+  b.setAttribute("aria-label", on ? "Sound on (learn)" : "Sound off (practice)"); b.title = b.getAttribute("aria-label");
 }
+export { draw };
 
 // ---------------------------------------------------------------- MIDI files (format 0 and 1, tempo map)
 export function parseMidi(buf) {
@@ -138,16 +157,14 @@ export function parseMidi(buf) {
 }
 
 // ---------------------------------------------------------------- wiring
-$("pPlay").addEventListener("click", toggle);
 $("pRestart").addEventListener("click", () => { t = -2; started.clear(); draw(); });
-$("mLearn").addEventListener("click", () => mode(true));
-$("mPractice").addEventListener("click", () => mode(false));
+$("sound").addEventListener("click", () => setSound(!sound));
 $("speed").addEventListener("input", () => { $("speedOut").textContent = `${$("speed").value} %`; });
 $("ahead").addEventListener("input", () => { $("aheadOut").textContent = `${$("ahead").value} s`; draw(); });
 $("midiIn").addEventListener("change", async (e) => {
   const f = e.target.files[0]; if (!f) return;
-  try { setSong(parseMidi(await f.arrayBuffer()), f.name.replace(/\.midi?$/i, "")); }
-  catch (err) { $("pracInfo").textContent = `This MIDI file could not be read (${err.message}).`; }
+  try { window.dispatchEvent(new CustomEvent("song", { detail: { notes: parseMidi(await f.arrayBuffer()), name: f.name.replace(/\.midi?$/i, "") } })); }
+  catch (err) { $("status").textContent = `MIDI file not readable (${err.message})`; }
   e.target.value = "";
 });
 window.addEventListener("resize", draw);

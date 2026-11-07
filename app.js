@@ -2,7 +2,7 @@
 import { BasicPitch, addPitchBendsToNoteEvents, noteFramesToTime, outputToNotesPoly }
   from "https://cdn.jsdelivr.net/npm/@spotify/basic-pitch@1.0.1/+esm";
 
-import { setSong } from "./practice.js";
+import { setSong, toggle as fallToggle, stop as fallStop, draw as fallDraw, setBeamsOnly } from "./practice.js";
 
 const $ = (id) => document.getElementById(id);
 const SR = 22050;                       // Basic Pitch works on mono audio at 22.05 kHz
@@ -31,7 +31,7 @@ async function loadModel() {
   try {
     model = new BasicPitch("model/model.json");
     await model.model;
-    status("Ready. Press Record and play, or upload an audio file.");
+    status("ready");
   } catch (e) {
     status(`The model could not be loaded (${e.message}). Reload the page.`);
   }
@@ -57,7 +57,7 @@ async function startRecording() {
     node.onaudioprocess = (ev) => chunks.push(new Float32Array(ev.inputBuffer.getChannelData(0)));
     src.connect(node); node.connect(ctx.destination);
     rec = { ctx, stream, node, chunks, t0: performance.now() };
-    $("rec").classList.add("recording"); $("recLabel").textContent = "Stop";
+    $("rec").classList.add("recording"); $("rec").textContent = "■"; $("rec").title = "Stop";
     tick();
   } catch (e) {
     status(`No microphone (${e.name}). Allow the microphone for this page, or upload a recording instead.`);
@@ -65,13 +65,13 @@ async function startRecording() {
 }
 function tick() {
   if (!rec) return;
-  status(`Recording… ${((performance.now() - rec.t0) / 1000).toFixed(0)} s -- press Stop when you are done.`);
+  status(`recording ${((performance.now() - rec.t0) / 1000).toFixed(0)} s`);
   setTimeout(tick, 500);
 }
 async function stopRecording() {
   const { ctx, stream, node, chunks } = rec; rec = null;
   node.disconnect(); stream.getTracks().forEach((t) => t.stop());
-  $("rec").classList.remove("recording"); $("recLabel").textContent = "Record";
+  $("rec").classList.remove("recording"); $("rec").textContent = "●"; $("rec").title = "Record";
   const n = chunks.reduce((a, c) => a + c.length, 0);
   if (n < ctx.sampleRate * 0.5) { status("The recording was too short. Play for at least a second."); return; }
   const buf = ctx.createBuffer(1, n, ctx.sampleRate);
@@ -94,7 +94,7 @@ async function fromFile(file) {
 // ---------------------------------------------------------------- transcription
 async function transcribe(samples) {
   if (!model) { status("The model is still loading -- try again in a moment."); return; }
-  status(`Listening to ${(samples.length / SR).toFixed(1)} s of audio…`); progress(0);
+  status(`listening… ${(samples.length / SR).toFixed(0)} s`); progress(0);
   const frames = [], onsets = [], contours = [];
   await model.evaluateModel(samples, (f, o, c) => { frames.push(...f); onsets.push(...o); contours.push(...c); }, (p) => progress(p));
   lastOutput = { frames, onsets, contours };
@@ -110,7 +110,7 @@ function notesFromOutput() {
     .map((n) => ({ pitch: n.pitchMidi, start: n.startTimeSeconds, dur: n.durationSeconds, vel: Math.min(1, n.amplitude) }))
     .sort((a, b) => a.start - b.start || a.pitch - b.pitch);
   show(false);
-  status(notes.length ? `${notes.length} notes recognised.` : "No notes recognised. Play louder or raise the sensitivity.");
+  status(notes.length ? `${notes.length} notes` : "no notes -- play louder or raise the sensitivity (⚙)");
 }
 
 // ---------------------------------------------------------------- score (ABC notation)
@@ -195,22 +195,17 @@ function drawRoll(list) {
 // ---------------------------------------------------------------- show
 function show(example) {
   const list = example ? EXAMPLE : notes;
-  $("exampleTag").hidden = !example;
-  $("scoreTitle").textContent = example ? "Score (example: Ode to Joy)" : "Your score";
-  const bpm = +$("bpm").value;
-  window.ABCJS.renderAbc("sheet", toAbc(list, bpm), { responsive: "resize", paddingleft: 0, paddingright: 0 });
-  drawRoll(list);
-  const dur = list.length ? Math.max(...list.map((n) => n.start + n.dur)) : 0;
-  $("meta").textContent = list.length ? `${list.length} notes · ${dur.toFixed(1)} s · ${bpm} BPM grid` : "";
+  window.ABCJS.renderAbc("sheet", toAbc(list, +$("bpm").value), { responsive: "resize", paddingleft: 0, paddingright: 0 });
   $("play").disabled = !list.length; $("midi").disabled = !list.length;
-  setSong(list, example ? "Example: Ode to Joy" : "Your recording");
+  setSong(list, example ? "Ode to Joy (example)" : "your recording");
+  if (example) status("example: Ode to Joy");
 }
 
 // ---------------------------------------------------------------- playback
 let playCtx = null;
 function play() {
   const list = notes.length ? notes : EXAMPLE;
-  if (playCtx) { playCtx.close(); playCtx = null; $("play").textContent = "Play notes"; return; }
+  if (playCtx) { playCtx.close(); playCtx = null; $("play").textContent = "▶"; return; }
   playCtx = new AudioContext(); const t0 = playCtx.currentTime + .1;
   for (const n of list) {
     const o = playCtx.createOscillator(), a = playCtx.createGain();
@@ -220,9 +215,9 @@ function play() {
     a.gain.exponentialRampToValueAtTime(.001, e);
     o.connect(a).connect(playCtx.destination); o.start(s); o.stop(e + .05);
   }
-  $("play").textContent = "Stop";
+  $("play").textContent = "■";
   const end = Math.max(...list.map((n) => n.start + n.dur));
-  const me = playCtx; setTimeout(() => { if (playCtx === me) { playCtx.close(); playCtx = null; $("play").textContent = "Play notes"; } }, (end + .5) * 1000);
+  const me = playCtx; setTimeout(() => { if (playCtx === me) { playCtx.close(); playCtx = null; $("play").textContent = "▶"; } }, (end + .5) * 1000);
 }
 
 // ---------------------------------------------------------------- MIDI file
@@ -258,6 +253,26 @@ $("midi").addEventListener("click", downloadMidi);
 $("bpm").addEventListener("input", () => { $("bpmOut").textContent = `${$("bpm").value} BPM`; show(!notes.length); });
 $("sens").addEventListener("input", () => { $("sensOut").textContent = SENS[$("sens").value][2]; notesFromOutput(); });
 $("minlen").addEventListener("input", () => { $("minlenOut").textContent = `${$("minlen").value} ms`; notesFromOutput(); });
-window.addEventListener("resize", () => drawRoll(notes.length ? notes : EXAMPLE));
+// one play button: in the score view it plays the notes, in the falling view it runs the falling notes
+const falling = () => document.body.classList.contains("falling");
+$("play").removeEventListener("click", play);
+$("play").addEventListener("click", () => (falling() ? fallToggle() : play()));
+function view(v) {                          // "score" | "falling" | "piano"
+  if (playCtx) play();                       // stop the score playback
+  const fall = v !== "score";
+  if (!fall) fallStop();
+  setBeamsOnly(v === "piano");
+  document.body.classList.toggle("falling", fall);
+  $("sheet").hidden = fall; $("fall").hidden = !fall;              // explicit: abcjs sets its own styles on #sheet
+  for (const [id, name] of [["vScore", "score"], ["vFall", "falling"], ["vPiano", "piano"]]) $(id).setAttribute("aria-pressed", String(v === name));
+  if (fall) requestAnimationFrame(fallDraw);
+}
+$("vScore").addEventListener("click", () => view("score"));
+$("vFall").addEventListener("click", () => view("falling"));
+$("vPiano").addEventListener("click", () => view("piano"));
+window.addEventListener("song", (e) => { notes = e.detail.notes; show(false); status(`${e.detail.name}: ${notes.length} notes`); view("falling"); });
 show(true);
+if (["falling", "piano"].includes(location.hash.slice(1))) view(location.hash.slice(1));   // #falling, #piano open that view
 loadModel();
+// installable app (PWA): the service worker keeps the page, the model and the libraries for offline use
+if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});

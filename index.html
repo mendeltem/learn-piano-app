@@ -4,134 +4,92 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Learn Piano</title>
-<meta name="description" content="Play the piano, get the sheet music: audio to notes in the browser with Spotify's Basic Pitch.">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600&family=Source+Sans+3:wght@400;600&family=JetBrains+Mono:wght@400&display=swap">
+<meta name="description" content="Play the piano, get the notes. Score or falling notes, in the browser (Basic Pitch).">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="theme-color" content="#121418">
+<meta name="apple-mobile-web-app-capable" content="yes">
 <style>
-/* Layout: one column like a music stand -- controls on top, the score as the hero, the piano roll below it. */
+/* Layout: the notes fill the page; one slim bar of symbols on top, settings tucked behind a gear. */
 :root {
-  --paper: #f7f6f2;      /* score paper */
-  --ink: #1e1d1b;        /* engraving ink */
-  --muted: #6b6760;
-  --line: #d9d5cc;
-  --key: #2f5d8a;        /* accent: a calm blue, like a pencil mark on a score */
-  --key-soft: #dce6f0;
-  --rec: #b3261e;        /* recording */
-  --card: #ffffff;
-  --font-display: "Cormorant Garamond", "Times New Roman", serif;
-  --font-body: "Source Sans 3", system-ui, sans-serif;
-  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+  --paper: #f8f7f3; --ink: #1d1c1a; --muted: #8a857c; --line: #dedad1; --key: #2f5d8a; --rec: #b3261e; --bar: #ffffffd9;
 }
 @media (prefers-color-scheme: dark) {
-  :root { --paper: #15171a; --ink: #e9e6df; --muted: #9a958c; --line: #33363b; --key: #8db4dc; --key-soft: #233446;
-          --rec: #ef6b62; --card: #1c1f23; color-scheme: dark; }
+  :root { --paper: #121418; --ink: #ebe8e1; --muted: #8d887f; --line: #2c3036; --key: #8db4dc; --rec: #ef6b62; --bar: #121418d9; color-scheme: dark; }
 }
 * { box-sizing: border-box; }
-html, body { margin: 0; }
-body {
-  background: var(--paper); color: var(--ink); font: 16px/1.5 var(--font-body);
-  padding-block: 24px 48px;
-  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+html, body { margin: 0; height: 100%; }
+body { background: var(--paper); color: var(--ink); font: 15px/1.4 system-ui, sans-serif; display: flex; flex-direction: column; }
+.bar {
+  position: sticky; top: 0; z-index: 2; display: flex; gap: 6px; align-items: center; flex-wrap: wrap;
+  padding: 10px max(12px, env(safe-area-inset-right, 0px)) 10px max(12px, env(safe-area-inset-left, 0px));
+  background: var(--bar); backdrop-filter: blur(6px);
 }
-main { max-width: 960px; margin: 0 auto; display: grid; gap: 20px; }
-h1 { font: 600 2.4rem/1.1 var(--font-display); margin: 0; letter-spacing: .01em; text-wrap: balance; }
-.lede { color: var(--muted); margin: 4px 0 0; max-width: 62ch; }
-.panel { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 16px; display: grid; gap: 14px; min-width: 0; }
-.row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
-button, .file {
-  font: 600 .95rem var(--font-body); border-radius: 999px; border: 1px solid var(--line); background: var(--paper);
-  color: var(--ink); padding: 10px 18px; cursor: pointer; display: inline-flex; gap: 8px; align-items: center;
+.bar button, .bar .file, .bar summary {
+  width: 40px; height: 40px; border-radius: 50%; border: 1px solid var(--line); background: transparent; color: var(--ink);
+  font-size: 17px; cursor: pointer; display: inline-grid; place-items: center; list-style: none; position: relative;
 }
-button:hover, .file:hover { border-color: var(--key); }
-button:focus-visible, .file:focus-within, input:focus-visible { outline: 3px solid var(--key-soft); outline-offset: 2px; }
-button.primary { background: var(--key); border-color: var(--key); color: var(--paper); }
-button.recording { background: var(--rec); border-color: var(--rec); color: #fff; }
-button:disabled { opacity: .5; cursor: default; }
-.file input { position: absolute; width: 1px; height: 1px; opacity: 0; }
-.dot { width: 10px; height: 10px; border-radius: 50%; background: currentColor; }
-.recording .dot { animation: pulse 1s infinite; }
-@keyframes pulse { 50% { opacity: .3; } }
-@media (prefers-reduced-motion: reduce) { .recording .dot { animation: none; } }
-label.ctl { display: grid; gap: 4px; font-size: .85rem; color: var(--muted); min-width: 150px; }
-label.ctl output { font: .85rem var(--font-mono); color: var(--ink); }
+.bar summary::-webkit-details-marker { display: none; }
+.bar button:hover, .bar .file:hover, .bar summary:hover { border-color: var(--key); }
+.bar button:focus-visible, .bar summary:focus-visible, .file:focus-within { outline: 2px solid var(--key); outline-offset: 2px; }
+.bar button:disabled { opacity: .35; cursor: default; }
+#rec { color: var(--rec); }
+#rec.recording { background: var(--rec); color: #fff; border-color: var(--rec); }
+.file input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+.sep { width: 1px; height: 24px; background: var(--line); margin: 0 4px; }
+.view { display: inline-flex; border: 1px solid var(--line); border-radius: 20px; overflow: hidden; }
+.view button { border: 0; border-radius: 0; width: auto; padding: 0 12px; font-size: 13px; }
+.view button[aria-pressed="true"] { background: var(--ink); color: var(--paper); }
+.status { margin-left: auto; font: 12px ui-monospace, monospace; color: var(--muted); max-width: 40ch; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.progress { position: absolute; left: 0; bottom: 0; height: 2px; background: var(--key); width: 0; transition: width .2s; }
+details.set { position: relative; }
+.set .pane {
+  position: absolute; top: 48px; left: 0; background: var(--paper); border: 1px solid var(--line); border-radius: 10px;
+  padding: 12px; display: grid; gap: 10px; width: 230px; font-size: 12px; color: var(--muted); z-index: 3;
+}
+.set label { display: grid; gap: 2px; }
+.set output { color: var(--ink); font-family: ui-monospace, monospace; }
 input[type=range] { accent-color: var(--key); width: 100%; }
-.status { font: .9rem var(--font-mono); color: var(--muted); min-height: 1.4em; }
-.bar { height: 4px; background: var(--line); border-radius: 2px; overflow: hidden; }
-.bar > i { display: block; height: 100%; width: 0; background: var(--key); transition: width .2s; }
-.tag { font: 600 .72rem var(--font-body); letter-spacing: .08em; text-transform: uppercase; color: var(--key);
-       border: 1px solid var(--key); border-radius: 4px; padding: 1px 6px; }
-.scorehead { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; flex-wrap: wrap; }
-.scorehead h2 { font: 600 1.5rem var(--font-display); margin: 0; }
-#sheet { overflow-x: auto; min-height: 120px; }
-#sheet svg { max-width: 100%; }
+#sheet { flex: 1; overflow: auto; padding: 8px max(12px, env(safe-area-inset-right, 0px)) 24px max(12px, env(safe-area-inset-left, 0px)); }
 #sheet svg path, #sheet svg text { fill: var(--ink); }
-#sheet svg .abcjs-staff, #sheet svg .abcjs-bar { stroke: var(--ink); }
-#roll { width: 100%; height: 220px; display: block; border-radius: 6px; background: var(--paper); }
-.meta { font: .85rem var(--font-mono); color: var(--muted); font-variant-numeric: tabular-nums; }
-.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 999px; overflow: hidden; }
-.seg button { border: 0; border-radius: 0; }
-.seg button[aria-checked="true"] { background: var(--key-soft); color: var(--ink); }
-#fall { width: 100%; height: min(70vh, 520px); display: block; border-radius: 8px; background: #07090d; }
-footer { color: var(--muted); font-size: .85rem; max-width: 70ch; }
-footer a { color: var(--key); }
+#fall { flex: 1; width: 100%; min-height: 0; display: block; background: #07090d; }
+.only-fall { display: none; }
+body.falling .only-fall { display: inline-grid; }
+[hidden] { display: none !important; }
 </style>
 </head>
 <body>
-<main>
-  <header>
-    <h1>Learn Piano</h1>
-    <p class="lede">Play, then read what you played. The notes are recognised in your browser by Spotify's open-source
-      Basic Pitch model; the recording never leaves your device.</p>
-  </header>
-
-  <section class="panel" aria-label="Input">
-    <div class="row">
-      <button id="rec" class="primary" type="button"><span class="dot" aria-hidden="true"></span><span id="recLabel">Record</span></button>
-      <label class="file" for="file">Upload audio<input id="file" type="file" accept="audio/*"></label>
-      <button id="play" type="button" disabled>Play notes</button>
-      <button id="midi" type="button" disabled>Download MIDI</button>
+<div class="bar" role="toolbar" aria-label="Controls">
+  <button id="rec" type="button" title="Record" aria-label="Record">●</button>
+  <label class="file" for="file" title="Upload a recording" aria-label="Upload a recording">↑<input id="file" type="file" accept="audio/*"></label>
+  <label class="file" for="midiIn" title="Open a MIDI file" aria-label="Open a MIDI file">♪<input id="midiIn" type="file" accept=".mid,.midi,audio/midi"></label>
+  <span class="sep" aria-hidden="true"></span>
+  <button id="play" type="button" title="Play the notes" aria-label="Play the notes" disabled>▶</button>
+  <button id="pRestart" class="only-fall" type="button" title="Back to the start" aria-label="Back to the start">⏮</button>
+  <button id="sound" class="only-fall" type="button" title="Sound on (learn) / off (practice)" aria-label="Sound on" aria-pressed="true">🔊</button>
+  <button id="midi" type="button" title="Download MIDI" aria-label="Download MIDI" disabled>⬇</button>
+  <span class="sep" aria-hidden="true"></span>
+  <div class="view" role="group" aria-label="View">
+    <button id="vScore" type="button" aria-pressed="true">Score</button>
+    <button id="vFall" type="button" aria-pressed="false">Falling</button>
+    <button id="vPiano" type="button" aria-pressed="false">Piano</button>
+  </div>
+  <details class="set">
+    <summary title="Settings" aria-label="Settings">⚙</summary>
+    <div class="pane">
+      <label for="bpm">Tempo <output id="bpmOut">90 BPM</output><input id="bpm" type="range" min="40" max="180" value="90"></label>
+      <label for="sens">Sensitivity <output id="sensOut">medium</output><input id="sens" type="range" min="1" max="5" value="3"></label>
+      <label for="minlen">Shortest note <output id="minlenOut">120 ms</output><input id="minlen" type="range" min="40" max="300" step="20" value="120"></label>
+      <label for="speed">Speed <output id="speedOut">100 %</output><input id="speed" type="range" min="25" max="150" step="5" value="100"></label>
+      <label for="ahead">Look ahead <output id="aheadOut">3 s</output><input id="ahead" type="range" min="1" max="8" step="0.5" value="3"></label>
     </div>
-    <div class="row">
-      <label class="ctl" for="bpm">Tempo <output id="bpmOut">90 BPM</output><input id="bpm" type="range" min="40" max="180" value="90"></label>
-      <label class="ctl" for="sens">Sensitivity <output id="sensOut">medium</output><input id="sens" type="range" min="1" max="5" value="3"></label>
-      <label class="ctl" for="minlen">Shortest note <output id="minlenOut">120 ms</output><input id="minlen" type="range" min="40" max="300" step="20" value="120"></label>
-    </div>
-    <div class="bar" aria-hidden="true"><i id="progress"></i></div>
-    <div class="status" id="status" role="status">Loading the model…</div>
-  </section>
-
-  <section class="panel" aria-label="Score">
-    <div class="scorehead"><h2 id="scoreTitle">Score</h2><span class="tag" id="exampleTag">Example</span></div>
-    <div id="sheet"></div>
-    <canvas id="roll" aria-label="Piano roll of the recognised notes"></canvas>
-    <div class="meta" id="meta"></div>
-  </section>
-
-  <section class="panel practice" aria-label="Practice">
-    <div class="scorehead"><h2>Practice</h2><span class="meta" id="pracInfo"></span></div>
-    <div class="row">
-      <button id="pPlay" class="primary" type="button">Play</button>
-      <button id="pRestart" type="button">Restart</button>
-      <div class="seg" role="radiogroup" aria-label="Mode">
-        <button id="mLearn" type="button" role="radio" aria-checked="true">Learn · sound on</button>
-        <button id="mPractice" type="button" role="radio" aria-checked="false">Practice · sound off</button>
-      </div>
-      <label class="file" for="midiIn">Open MIDI file<input id="midiIn" type="file" accept=".mid,.midi,audio/midi"></label>
-    </div>
-    <div class="row">
-      <label class="ctl" for="speed">Speed <output id="speedOut">100 %</output><input id="speed" type="range" min="25" max="150" step="5" value="100"></label>
-      <label class="ctl" for="ahead">Look ahead <output id="aheadOut">3 s</output><input id="ahead" type="range" min="1" max="8" step="0.5" value="3"></label>
-    </div>
-    <canvas id="fall" aria-label="Falling notes over a piano keyboard"></canvas>
-  </section>
-
-  <footer>
-    Tips: play close to the microphone in a quiet room; a real piano or a digital piano's speaker both work. Tempo only
-    changes how the notes are written (16th-note grid, 4/4). Built on
-    <a href="https://github.com/spotify/basic-pitch-ts">Basic Pitch</a> (Apache-2.0) and
-    <a href="https://www.abcjs.net/">abcjs</a>.
-  </footer>
-</main>
+  </details>
+  <span class="status" id="status" role="status">loading…</span>
+  <i class="progress" id="progress" aria-hidden="true"></i>
+</div>
+<div id="sheet" aria-label="Score"></div>
+<canvas id="fall" aria-label="Falling notes over a keyboard" hidden></canvas>
 <script src="https://cdn.jsdelivr.net/npm/abcjs@6.4.4/dist/abcjs-basic-min.js"></script>
 <script type="module" src="app.js"></script>
 </body>
