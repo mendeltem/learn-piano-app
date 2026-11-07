@@ -18,9 +18,12 @@ export function setSong(notes, name) {
 
 // ---------------------------------------------------------------- keyboard geometry
 function layout(w) {
-  let lo = 48, hi = 84;                                          // at least C3..C6
-  if (song.length) { lo = Math.min(lo, ...song.map((n) => n.pitch)); hi = Math.max(hi, ...song.map((n) => n.pitch)); }
-  lo = Math.max(21, lo - (lo % 12)); hi = Math.min(108, hi + (11 - (hi % 12)));
+  // only the range the song uses, a little margin, starting and ending on white keys; at least 2 octaves
+  let lo = 60, hi = 72;
+  if (song.length) { lo = Math.min(...song.map((n) => n.pitch)); hi = Math.max(...song.map((n) => n.pitch)); }
+  lo = Math.max(21, lo - 2); hi = Math.min(108, hi + 2);
+  while (hi - lo < 24) { if (lo > 21) lo--; if (hi - lo < 24 && hi < 108) hi++; }
+  while (isBlack(lo)) lo--; while (isBlack(hi)) hi++;
   const whites = []; for (let p = lo; p <= hi; p++) if (!isBlack(p)) whites.push(p);
   const ww = w / whites.length, keys = new Map();
   whites.forEach((p, i) => keys.set(p, { x: i * ww, w: ww, black: false }));
@@ -64,12 +67,13 @@ function draw() {
   // light beams from every key that sounds now (full height in the Piano view, a short flare in the falling view)
   for (const [p, col] of active) {
     const k = keys.get(p); if (!k) continue;
-    const bh = beamsOnly ? top : top * 0.35, cx = k.x + k.w / 2, bw = k.w * (beamsOnly ? 1.3 : 0.9);
+    // softer beams (user 07.11.): more transparent, narrower, less glow
+    const bh = beamsOnly ? top * 0.85 : top * 0.25, cx = k.x + k.w / 2, bw = k.w * (beamsOnly ? 0.8 : 0.6);
     const gr = g.createLinearGradient(0, top, 0, top - bh);
-    gr.addColorStop(0, col); gr.addColorStop(0.25, col + "aa"); gr.addColorStop(1, col + "00");
-    g.globalCompositeOperation = "lighter"; g.fillStyle = gr; g.shadowColor = col; g.shadowBlur = 24;
+    gr.addColorStop(0, col + "99"); gr.addColorStop(0.3, col + "44"); gr.addColorStop(1, col + "00");
+    g.globalCompositeOperation = "lighter"; g.fillStyle = gr; g.shadowColor = col; g.shadowBlur = 10;
     g.fillRect(cx - bw / 2, top - bh, bw, bh);
-    g.fillStyle = "rgba(255,255,255,.55)"; g.fillRect(cx - bw * 0.12, top - bh * 0.8, bw * 0.24, bh * 0.8);   // bright core
+    g.fillStyle = "rgba(255,255,255,.22)"; g.fillRect(cx - bw * 0.08, top - bh * 0.6, bw * 0.16, bh * 0.6);   // faint core
     g.shadowBlur = 0; g.globalCompositeOperation = "source-over";
   }
   // hit line

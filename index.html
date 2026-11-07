@@ -22,13 +22,13 @@
 html, body { margin: 0; height: 100%; }
 body { background: var(--paper); color: var(--ink); font: 15px/1.4 system-ui, sans-serif; display: flex; flex-direction: column; }
 .bar {
-  position: sticky; top: 0; z-index: 2; display: flex; gap: 6px; align-items: center; flex-wrap: wrap;
-  padding: 10px max(12px, env(safe-area-inset-right, 0px)) 10px max(12px, env(safe-area-inset-left, 0px));
+  position: sticky; top: 0; z-index: 2; display: flex; gap: 4px; align-items: center; flex-wrap: wrap;
+  padding: 6px max(8px, env(safe-area-inset-right, 0px)) 6px max(8px, env(safe-area-inset-left, 0px));
   background: var(--bar); backdrop-filter: blur(6px);
 }
 .bar button, .bar .file, .bar summary {
-  width: 40px; height: 40px; border-radius: 50%; border: 1px solid var(--line); background: transparent; color: var(--ink);
-  font-size: 17px; cursor: pointer; display: inline-grid; place-items: center; list-style: none; position: relative;
+  width: 34px; height: 34px; border-radius: 50%; border: 1px solid var(--line); background: transparent; color: var(--ink);
+  font-size: 15px; cursor: pointer; display: inline-grid; place-items: center; list-style: none; position: relative;
 }
 .bar summary::-webkit-details-marker { display: none; }
 .bar button:hover, .bar .file:hover, .bar summary:hover { border-color: var(--key); }
@@ -37,15 +37,15 @@ body { background: var(--paper); color: var(--ink); font: 15px/1.4 system-ui, sa
 #rec { color: var(--rec); }
 #rec.recording { background: var(--rec); color: #fff; border-color: var(--rec); }
 .file input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
-.sep { width: 1px; height: 24px; background: var(--line); margin: 0 4px; }
+.sep { width: 1px; height: 20px; background: var(--line); margin: 0 2px; }
 .view { display: inline-flex; border: 1px solid var(--line); border-radius: 20px; overflow: hidden; }
-.view button { border: 0; border-radius: 0; width: auto; padding: 0 12px; font-size: 13px; }
+.view button { border: 0; border-radius: 0; width: 36px; padding: 0; font-size: 16px; }
 .view button[aria-pressed="true"] { background: var(--ink); color: var(--paper); }
-.status { margin-left: auto; font: 12px ui-monospace, monospace; color: var(--muted); max-width: 40ch; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.status { margin-left: auto; font: 11px ui-monospace, monospace; color: var(--muted); max-width: 22ch; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .progress { position: absolute; left: 0; bottom: 0; height: 2px; background: var(--key); width: 0; transition: width .2s; }
 details.set { position: relative; }
 .set .pane {
-  position: absolute; top: 48px; left: 0; background: var(--paper); border: 1px solid var(--line); border-radius: 10px;
+  position: absolute; top: 42px; right: 0; background: var(--paper); border: 1px solid var(--line); border-radius: 10px;
   padding: 12px; display: grid; gap: 10px; width: 230px; font-size: 12px; color: var(--muted); z-index: 3;
 }
 .set label { display: grid; gap: 2px; }
@@ -71,9 +71,9 @@ body.falling .only-fall { display: inline-grid; }
   <button id="midi" type="button" title="Download MIDI" aria-label="Download MIDI" disabled>⬇</button>
   <span class="sep" aria-hidden="true"></span>
   <div class="view" role="group" aria-label="View">
-    <button id="vScore" type="button" aria-pressed="true">Score</button>
-    <button id="vFall" type="button" aria-pressed="false">Falling</button>
-    <button id="vPiano" type="button" aria-pressed="false">Piano</button>
+    <button id="vScore" type="button" aria-pressed="true" title="Score" aria-label="Score">𝄞</button>
+    <button id="vFall" type="button" aria-pressed="false" title="Falling notes" aria-label="Falling notes">⇊</button>
+    <button id="vPiano" type="button" aria-pressed="false" title="Piano with light beams" aria-label="Piano">🎹</button>
   </div>
   <details class="set">
     <summary title="Settings" aria-label="Settings">⚙</summary>
